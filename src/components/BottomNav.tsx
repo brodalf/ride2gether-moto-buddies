@@ -1,7 +1,7 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Calendar, User, Home } from "lucide-react";
+import { Heart, MessageCircle, Calendar, User, Home, Users } from "lucide-react";
 
 export const BottomNav = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export const BottomNav = () => {
     { id: "home", icon: Home, label: "Home", path: "/" },
     { id: "matching", icon: Heart, label: "Matching", path: "/matching" },
     { id: "chat", icon: MessageCircle, label: "Chats", path: "/chat" },
+    { id: "group-chat", icon: Users, label: "Gruppen", path: "/group-chat" },
     { id: "calendar", icon: Calendar, label: "Events", path: "/calendar" },
     { id: "profile", icon: User, label: "Profil", path: "/profile" }
   ];

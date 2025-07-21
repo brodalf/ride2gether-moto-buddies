@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
 import Matching from "./pages/Matching";
 import Chat from "./pages/Chat";
+import GroupChat from "./pages/GroupChat";
 import Calendar from "./pages/Calendar";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/matching" element={<Matching />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/group-chat" element={<GroupChat />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
