@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, X, MapPin, Clock, Bike } from "lucide-react";
+import { Heart, X, MapPin, Clock, Bike, Users } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 
@@ -10,6 +11,7 @@ const Matching = () => {
   const navigate = useNavigate();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [groupSize, setGroupSize] = useState<number[]>([1, 8]);
 
   // Beispiel-Daten für andere Benutzer
   const profiles = [
@@ -85,6 +87,26 @@ const Matching = () => {
         </div>
         <div className="text-gray-400">
           {currentCardIndex + 1} / {profiles.length}
+        </div>
+      </div>
+
+      {/* Group Size Filter */}
+      <div className="px-6 pb-2">
+        <div className="flex items-center gap-2 mb-2">
+          <Users className="w-4 h-4 text-orange-400" />
+          <span className="text-sm font-medium text-gray-300">Gruppengröße</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-400 w-16">Min: {groupSize[0]}</span>
+          <Slider
+            min={1}
+            max={8}
+            step={1}
+            value={groupSize}
+            onValueChange={setGroupSize}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-400 w-16 text-right">Max: {groupSize[1]}</span>
         </div>
       </div>
 
