@@ -11,7 +11,7 @@ const Matching = () => {
   const navigate = useNavigate();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [groupSize, setGroupSize] = useState<number[]>([1, 8]);
+  const [groupSize, setGroupSize] = useState<number[]>([2, 8]);
 
   // Beispiel-Daten für andere Benutzer
   const profiles = [
@@ -99,7 +99,7 @@ const Matching = () => {
         <div className="flex items-center gap-4">
           <span className="text-xs text-gray-400 w-16">Min: {groupSize[0]}</span>
           <Slider
-            min={1}
+            min={2}
             max={8}
             step={1}
             value={groupSize}
