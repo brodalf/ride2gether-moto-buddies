@@ -63,7 +63,7 @@ const Chat = () => {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [matchIdParam]);
+  }, [matchIdParam, navigate]); // navigate als Dependency verhindert stale closure
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,7 +109,11 @@ const Chat = () => {
           setMessages((prev) => [...prev, payload.new as Message]);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err || status === "CHANNEL_ERROR") {
+          console.error("Realtime-Subscription fehlgeschlagen:", status, err);
+        }
+      });
 
     channelRef.current = channel;
   };

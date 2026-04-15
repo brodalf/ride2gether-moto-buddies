@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, X, MapPin, Bike, Loader2 } from "lucide-react";
+import { Heart, X, MapPin, Bike, Loader2, Navigation } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase, PotentialMatch } from "@/lib/supabase";
@@ -15,6 +15,7 @@ const Matching = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [noLocation, setNoLocation] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -29,10 +30,25 @@ const Matching = () => {
       await loadMatches(session.user.id);
     };
     init();
-  }, []);
+  }, [navigate]);
 
   const loadMatches = async (uid: string) => {
     setLoading(true);
+    setNoLocation(false);
+
+    // Standort prüfen – ohne Standort läuft das Matching gar nicht
+    const { data: locationData } = await supabase
+      .from("user_locations")
+      .select("user_id")
+      .eq("user_id", uid)
+      .maybeSingle();
+
+    if (!locationData) {
+      setNoLocation(true);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.rpc("get_potential_matches", {
       p_user_id: uid,
       p_limit: 20,
@@ -48,6 +64,31 @@ const Matching = () => {
       setCurrentIndex(0);
     }
     setLoading(false);
+  };
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation wird nicht unterstützt", variant: "destructive" });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        if (!userId) return;
+        await supabase.rpc("update_user_location", {
+          p_user_id: userId,
+          p_lat: pos.coords.latitude,
+          p_lng: pos.coords.longitude,
+        });
+        await loadMatches(userId);
+      },
+      () => {
+        toast({
+          title: "Standort nicht verfügbar",
+          description: "Bitte erlaube den Standortzugriff in deinen Browser-Einstellungen.",
+          variant: "destructive",
+        });
+      }
+    );
   };
 
   const handleSwipe = async (direction: "like" | "pass") => {
@@ -88,13 +129,38 @@ const Matching = () => {
     );
   }
 
+  // Kein Standort → erklärender Hinweis statt stiller Leere
+  if (noLocation) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="text-center max-w-sm">
+            <Navigation className="w-14 h-14 text-orange-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-3">Standort erforderlich</h2>
+            <p className="text-gray-400 mb-6 leading-relaxed">
+              Das Matching berechnet die Distanz zu anderen Bikern. Erlaube den
+              Standortzugriff, damit wir passende Tourenpartner in deiner Nähe finden können.
+            </p>
+            <Button onClick={requestLocation} className="w-full bg-orange-500 hover:bg-orange-600">
+              Standort freigeben
+            </Button>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
   if (!currentProfile) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center px-6">
             <h2 className="text-2xl font-bold mb-4">Keine weiteren Profile</h2>
-            <p className="text-gray-400 mb-6">Schau später noch einmal vorbei!</p>
+            <p className="text-gray-400 mb-6">
+              Im Moment gibt es niemanden in deiner Nähe mit passendem Fahrstil. Schau später
+              noch einmal vorbei!
+            </p>
             <Button
               onClick={() => userId && loadMatches(userId)}
               className="bg-orange-500 hover:bg-orange-600"

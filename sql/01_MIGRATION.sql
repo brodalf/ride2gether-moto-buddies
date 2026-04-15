@@ -177,11 +177,21 @@ DECLARE
   v_max_dist   INTEGER;
   v_group_size INTEGER;
 BEGIN
+  -- Sicherheit: nur eigene User-ID erlaubt
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
   SELECT ul.location, p.riding_style, p.max_distance_km, p.preferred_group_size
   INTO   v_location,  v_style,        v_max_dist,        v_group_size
   FROM   public.profiles p
   LEFT JOIN public.user_locations ul ON ul.user_id = p.id
   WHERE  p.id = p_user_id;
+
+  -- Kein Standort gesetzt → leeres Ergebnis (kein Absturz)
+  IF v_location IS NULL THEN
+    RETURN;
+  END IF;
 
   RETURN QUERY
   SELECT
@@ -229,6 +239,11 @@ DECLARE
   v_match_exists BOOLEAN := false;
   v_match_id     UUID;
 BEGIN
+  -- Sicherheit: nur eigene User-ID als Swiper erlaubt
+  IF p_swiper_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
   -- Swipe eintragen (ON CONFLICT = idempotent, keine Fehler bei Doppel-Swipe)
   INSERT INTO public.swipes (swiper_id, swiped_id, direction)
   VALUES (p_swiper_id, p_swiped_id, p_direction)
