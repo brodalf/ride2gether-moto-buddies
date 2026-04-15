@@ -25,6 +25,7 @@ const ProfileSetup = () => {
     bikeBrand: "",
     ridingStyle: "",
     maxDistance: [50],
+    groupSize: 0,
     avatarFile: null as File | null,
     bikeFile: null as File | null,
     avatarPreview: "",
@@ -157,6 +158,51 @@ const ProfileSetup = () => {
       ),
     },
     {
+      title: "Gruppengröße",
+      content: (
+        <div className="space-y-6">
+          <div>
+            <Label className="text-white text-base">
+              Bevorzugte Gruppengröße:{" "}
+              <span className="text-orange-400 font-semibold">
+                {profileData.groupSize === 0
+                  ? "Egal"
+                  : profileData.groupSize === 2
+                  ? "2 Personen (Duo)"
+                  : `${profileData.groupSize} Personen`}
+              </span>
+            </Label>
+            <div className="mt-6">
+              <Slider
+                value={[profileData.groupSize]}
+                onValueChange={([v]) => setProfileData({ ...profileData, groupSize: v })}
+                min={0}
+                max={8}
+                step={1}
+                className="w-full"
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-3">
+              <span>Egal</span>
+              <span>2</span>
+              <span>3</span>
+              <span>4</span>
+              <span>5</span>
+              <span>6</span>
+              <span>7</span>
+              <span>8</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            <span className="text-gray-400 font-medium">Egal</span> = Du siehst alle Gruppen und
+            wirst in allen gezeigt.{" "}
+            <span className="text-gray-400 font-medium">Konkrete Zahl</span> = Nur Nutzer mit
+            gleicher Präferenz oder „Egal" tauchen auf.
+          </p>
+        </div>
+      ),
+    },
+    {
       title: "Fotos hinzufügen",
       content: (
         <div className="space-y-4">
@@ -256,6 +302,7 @@ const ProfileSetup = () => {
         motorcycle_model: profileData.bikeType || null,
         riding_style: profileData.ridingStyle || null,
         max_distance_km: profileData.maxDistance[0],
+        preferred_group_size: profileData.groupSize,
         ...(avatarUrl && { avatar_url: avatarUrl }),
         ...(bikeUrl && { bike_photo_url: bikeUrl }),
       });
