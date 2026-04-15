@@ -1,33 +1,74 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Facebook, Mail } from "lucide-react";
+import { Facebook, Mail, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLogin && !acceptTerms) {
-      alert("Bitte akzeptiere die AGB und Datenschutzerklärung");
+      toast({
+        title: "AGB erforderlich",
+        description: "Bitte akzeptiere die AGB und Datenschutzerklärung.",
+        variant: "destructive",
+      });
       return;
     }
-    // Hier würde normalerweise die Authentifizierung stattfinden
-    navigate("/profile-setup");
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigate("/matching");
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        if (data.session) {
+          navigate("/profile-setup");
+        } else {
+          toast({
+            title: "Bestätigungs-E-Mail gesendet",
+            description: "Bitte überprüfe dein Postfach und klicke den Bestätigungslink.",
+          });
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler";
+      toast({ title: "Fehler", description: message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSocialAuth = (provider: string) => {
-    console.log(`Anmeldung mit ${provider}`);
-    // Hier würde die Social Media Authentifizierung implementiert
-    navigate("/profile-setup");
+  const handleSocialAuth = async (provider: "google" | "facebook") => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/profile-setup`,
+        },
+      });
+      if (error) throw error;
+      // Kein setLoading(false) hier – Browser redirectet zur OAuth-Seite
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler";
+      toast({ title: "Fehler", description: message, variant: "destructive" });
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,23 +85,33 @@ const Auth = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Social Login Buttons */}
+          {/* Social Login */}
           <div className="space-y-3">
             <Button
-              onClick={() => handleSocialAuth("Google")}
+              onClick={() => handleSocialAuth("google")}
+              disabled={loading}
               variant="outline"
               className="w-full bg-red-600 hover:bg-red-700 border-red-600 text-white"
             >
-              <Mail className="w-4 h-4 mr-2" />
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4 mr-2" />
+              )}
               {isLogin ? "Mit Google anmelden" : "Mit Google registrieren"}
             </Button>
 
             <Button
-              onClick={() => handleSocialAuth("Facebook")}
+              onClick={() => handleSocialAuth("facebook")}
+              disabled={loading}
               variant="outline"
               className="w-full bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
             >
-              <Facebook className="w-4 h-4 mr-2" />
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Facebook className="w-4 h-4 mr-2" />
+              )}
               {isLogin ? "Mit Facebook anmelden" : "Mit Facebook registrieren"}
             </Button>
           </div>
@@ -75,31 +126,28 @@ const Auth = () => {
             </div>
           </div>
 
-          {/* Email/Password Form */}
+          {/* E-Mail / Passwort */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Input
-                type="email"
-                placeholder="E-Mail Adresse"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
-                required
-              />
-            </div>
+            <Input
+              type="email"
+              placeholder="E-Mail Adresse"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+              required
+              autoComplete="email"
+            />
+            <Input
+              type="password"
+              placeholder="Passwort"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+              required
+              minLength={6}
+              autoComplete={isLogin ? "current-password" : "new-password"}
+            />
 
-            <div>
-              <Input
-                type="password"
-                placeholder="Passwort"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
-                required
-              />
-            </div>
-
-            {/* Terms and Conditions for Registration */}
             {!isLogin && (
               <div className="flex items-start space-x-2">
                 <Checkbox
@@ -118,23 +166,32 @@ const Auth = () => {
 
             <Button
               type="submit"
+              disabled={loading}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold"
             >
-              {isLogin ? "Anmelden" : "Registrieren"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Bitte warten...
+                </>
+              ) : isLogin ? (
+                "Anmelden"
+              ) : (
+                "Registrieren"
+              )}
             </Button>
           </form>
 
-          {/* Toggle between Login/Register */}
+          {/* Toggle Login / Register */}
           <div className="text-center">
             <Button
               onClick={() => setIsLogin(!isLogin)}
               variant="ghost"
               className="text-gray-400 hover:text-white"
             >
-              {isLogin 
-                ? "Noch kein Konto? Hier registrieren" 
-                : "Bereits ein Konto? Hier anmelden"
-              }
+              {isLogin
+                ? "Noch kein Konto? Hier registrieren"
+                : "Bereits ein Konto? Hier anmelden"}
             </Button>
           </div>
         </CardContent>
