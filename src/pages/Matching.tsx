@@ -71,6 +71,7 @@ const Matching = () => {
       toast({ title: "Geolocation wird nicht unterstützt", variant: "destructive" });
       return;
     }
+    setLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         if (!userId) return;
@@ -82,12 +83,14 @@ const Matching = () => {
         await loadMatches(userId);
       },
       () => {
+        setLoading(false);
         toast({
           title: "Standort nicht verfügbar",
           description: "Bitte erlaube den Standortzugriff in deinen Browser-Einstellungen.",
           variant: "destructive",
         });
-      }
+      },
+      { timeout: 10_000, maximumAge: 60_000 }
     );
   };
 
@@ -110,7 +113,8 @@ const Matching = () => {
         });
       }
     } catch (err: unknown) {
-      console.error("Swipe-Fehler:", err);
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler";
+      toast({ title: "Swipe konnte nicht gespeichert werden", description: message, variant: "destructive" });
     }
 
     setTimeout(() => {
@@ -206,7 +210,7 @@ const Matching = () => {
                 <Bike className="w-20 h-20 text-orange-500/50" />
               )}
               <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full text-sm">
-                {currentProfile.riding_style}
+                {currentProfile.riding_style ?? "Unbekannt"}
               </div>
             </div>
 
@@ -214,22 +218,33 @@ const Matching = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-2xl font-bold text-white">
-                  {currentProfile.full_name}, {currentProfile.age}
+                  {currentProfile.full_name ?? "Anonym"}
+                  {currentProfile.age != null ? `, ${currentProfile.age}` : ""}
                 </h2>
                 <div className="flex items-center text-gray-400">
                   <MapPin className="w-4 h-4 mr-1" />
-                  <span className="text-sm">{Math.round(currentProfile.distance_km)} km</span>
+                  <span className="text-sm">
+                    {currentProfile.distance_km != null
+                      ? `${Math.round(currentProfile.distance_km)} km`
+                      : "Entfernung unbekannt"}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center mb-4 text-orange-400">
-                <Bike className="w-4 h-4 mr-2" />
-                <span className="text-sm font-medium">
-                  {currentProfile.motorcycle_brand} {currentProfile.motorcycle_model}
-                </span>
-              </div>
+              {(currentProfile.motorcycle_brand || currentProfile.motorcycle_model) && (
+                <div className="flex items-center mb-4 text-orange-400">
+                  <Bike className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-medium">
+                    {[currentProfile.motorcycle_brand, currentProfile.motorcycle_model]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </span>
+                </div>
+              )}
 
-              <p className="text-gray-300 text-sm leading-relaxed mb-6">{currentProfile.bio}</p>
+              {currentProfile.bio && (
+                <p className="text-gray-300 text-sm leading-relaxed mb-6">{currentProfile.bio}</p>
+              )}
 
               {/* Swipe-Buttons */}
               <div className="flex space-x-4">

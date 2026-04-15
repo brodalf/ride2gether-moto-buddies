@@ -3,7 +3,7 @@
 -- Ausführen nach 01_MIGRATION.sql
 -- ============================================================
 
--- Standort eines Nutzers aktualisieren (Upsert via lng/lat)
+-- Standort eines Nutzers aktualisieren (Upsert via lat/lng)
 CREATE OR REPLACE FUNCTION public.update_user_location(
   p_user_id UUID,
   p_lat     FLOAT,
@@ -12,6 +12,11 @@ CREATE OR REPLACE FUNCTION public.update_user_location(
 RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- Sicherheit: nur eigene User-ID erlaubt
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
   INSERT INTO public.user_locations (user_id, location)
   VALUES (p_user_id, ST_MakePoint(p_lng, p_lat)::GEOGRAPHY)
   ON CONFLICT (user_id) DO UPDATE
@@ -34,6 +39,11 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- Sicherheit: nur eigene Matches abrufbar
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
   RETURN QUERY
   SELECT
     m.id                                                                AS match_id,
@@ -73,6 +83,20 @@ CREATE OR REPLACE FUNCTION public.mark_messages_read(
 RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- Sicherheit: nur eigene User-ID erlaubt
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
+  -- Sicherheit: Nutzer muss Teil des Matches sein
+  IF NOT EXISTS (
+    SELECT 1 FROM public.matches
+    WHERE id = p_match_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+  ) THEN
+    RAISE EXCEPTION 'Nicht autorisiert: Kein Teilnehmer dieses Matches';
+  END IF;
+
   UPDATE public.messages
   SET    read_at = now()
   WHERE  match_id  = p_match_id
@@ -90,6 +114,11 @@ DECLARE
   v_chats   BIGINT;
   v_msgs    BIGINT;
 BEGIN
+  -- Sicherheit: nur eigene Statistiken abrufbar
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Nicht autorisiert';
+  END IF;
+
   SELECT COUNT(*)
   INTO   v_matches
   FROM   public.matches
@@ -106,14 +135,14 @@ BEGIN
   WHERE  sender_id = p_user_id;
 
   RETURN jsonb_build_object(
-    'matches', v_matches,
-    'chats',   v_chats,
+    'matches',  v_matches,
+    'chats',    v_chats,
     'messages', v_msgs
   );
 END;
 $$;
 
--- Nutzer in einer Gruppe und deren Profile abrufen
+-- Mitglieder einer Gruppe mit Profildaten abrufen
 CREATE OR REPLACE FUNCTION public.get_group_members_with_profiles(p_group_id UUID)
 RETURNS TABLE (
   user_id    UUID,
@@ -124,6 +153,14 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- Sicherheit: nur Gruppen-Mitglieder dürfen die Mitgliederliste sehen
+  IF NOT EXISTS (
+    SELECT 1 FROM public.group_members
+    WHERE group_id = p_group_id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Nicht autorisiert: Kein Mitglied dieser Gruppe';
+  END IF;
+
   RETURN QUERY
   SELECT
     gm.user_id,

@@ -75,7 +75,11 @@ const ProfileSetup = () => {
               value={profileData.description}
               onChange={(e) => setProfileData({ ...profileData, description: e.target.value })}
               className="bg-gray-800 border-gray-700 text-white h-24"
+              maxLength={500}
             />
+            <p className="text-xs text-gray-500 mt-1 text-right">
+              {profileData.description.length}/500
+            </p>
           </div>
         </div>
       ),
@@ -273,7 +277,7 @@ const ProfileSetup = () => {
       return;
     }
 
-    // Letzter Schritt: Profil in Supabase speichern
+    // Letzter Schritt: Eingaben validieren und Profil in Supabase speichern
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -283,23 +287,37 @@ const ProfileSetup = () => {
       }
       const userId = session.user.id;
 
+      // Alter clientseitig validieren (DB hat CHECK-Constraint als zweite Schranke)
+      const parsedAge = profileData.age ? parseInt(profileData.age) : null;
+      if (parsedAge !== null && (parsedAge < 18 || parsedAge > 99)) {
+        throw new Error("Alter muss zwischen 18 und 99 liegen.");
+      }
+
+      // Fahrstil validieren
+      const validStyles = ["entspannt", "normal", "sportlich", "alle"];
+      if (profileData.ridingStyle && !validStyles.includes(profileData.ridingStyle)) {
+        throw new Error("Ungültiger Fahrstil.");
+      }
+
       // Fotos hochladen
       let avatarUrl: string | null = null;
       let bikeUrl: string | null = null;
       if (profileData.avatarFile) {
         avatarUrl = await uploadPhoto(userId, profileData.avatarFile, "avatar");
+        if (!avatarUrl) throw new Error("Profilfoto konnte nicht hochgeladen werden.");
       }
       if (profileData.bikeFile) {
         bikeUrl = await uploadPhoto(userId, profileData.bikeFile, "bike");
+        if (!bikeUrl) throw new Error("Motorradfoto konnte nicht hochgeladen werden.");
       }
 
       // Profil speichern
       const { error } = await supabase.from("profiles").upsert({
         id: userId,
-        age: profileData.age ? parseInt(profileData.age) : null,
-        bio: profileData.description || null,
-        motorcycle_brand: profileData.bikeBrand || null,
-        motorcycle_model: profileData.bikeType || null,
+        age: parsedAge,
+        bio: profileData.description.slice(0, 500) || null,
+        motorcycle_brand: profileData.bikeBrand.slice(0, 100) || null,
+        motorcycle_model: profileData.bikeType.slice(0, 100) || null,
         riding_style: profileData.ridingStyle || null,
         max_distance_km: profileData.maxDistance[0],
         preferred_group_size: profileData.groupSize,

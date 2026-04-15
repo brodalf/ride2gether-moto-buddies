@@ -11,7 +11,10 @@ const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const matchIdParam = searchParams.get("matchId");
+  const rawMatchIdParam = searchParams.get("matchId");
+  // UUID-Format validieren – verhindert fehlerhafte DB-Queries mit unbekannten Werten
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const matchIdParam = rawMatchIdParam && UUID_REGEX.test(rawMatchIdParam) ? rawMatchIdParam : null;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMatch, setCurrentMatch] = useState<UserMatch | null>(null);
@@ -95,6 +98,12 @@ const Chat = () => {
   };
 
   const subscribeToMessages = (mId: string) => {
+    // Alten Kanal zuerst sauber entfernen (verhindert mehrfache Subscriptions)
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
       .channel(`messages:${mId}`)
       .on(
@@ -121,6 +130,10 @@ const Chat = () => {
   const handleSendMessage = async () => {
     if (!message.trim() || !userId || !currentMatch) return;
     const content = message.trim();
+    if (content.length > 2000) {
+      toast({ title: "Nachricht zu lang", description: "Maximal 2000 Zeichen erlaubt.", variant: "destructive" });
+      return;
+    }
     setMessage("");
 
     const { error } = await supabase.from("messages").insert({

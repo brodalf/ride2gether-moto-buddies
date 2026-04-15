@@ -244,6 +244,11 @@ BEGIN
     RAISE EXCEPTION 'Nicht autorisiert';
   END IF;
 
+  -- Selbst-Swipe verhindern
+  IF p_swiper_id = p_swiped_id THEN
+    RAISE EXCEPTION 'Ungültige Anfrage: Swipe auf sich selbst nicht erlaubt';
+  END IF;
+
   -- Swipe eintragen (ON CONFLICT = idempotent, keine Fehler bei Doppel-Swipe)
   INSERT INTO public.swipes (swiper_id, swiped_id, direction)
   VALUES (p_swiper_id, p_swiped_id, p_direction)

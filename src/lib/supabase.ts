@@ -37,12 +37,12 @@ export interface Profile {
 
 export interface PotentialMatch {
   id: string
-  full_name: string
-  age: number
-  bio: string
-  motorcycle_brand: string
-  motorcycle_model: string
-  riding_style: RidingStyle
+  full_name: string | null
+  age: number | null
+  bio: string | null
+  motorcycle_brand: string | null
+  motorcycle_model: string | null
+  riding_style: RidingStyle | null
   avatar_url: string | null
   bike_photo_url: string | null
   distance_km: number
@@ -86,13 +86,29 @@ export async function updateUserLocation(userId: string, lat: number, lng: numbe
   })
 }
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+
 /** Foto in den Supabase Storage Bucket 'photos' hochladen */
 export async function uploadPhoto(
   userId: string,
   file: File,
   type: 'avatar' | 'bike'
 ): Promise<string | null> {
-  const ext = file.name.split('.').pop()
+  // Dateigröße prüfen
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    console.error('Upload abgelehnt: Datei zu groß', file.size)
+    return null
+  }
+
+  // MIME-Typ prüfen
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    console.error('Upload abgelehnt: Ungültiger Dateityp', file.type)
+    return null
+  }
+
+  // Pfad enthält userId → Supabase Storage RLS kann ihn darüber schützen
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${userId}/${type}_${Date.now()}.${ext}`
 
   const { error } = await supabase.storage.from('photos').upload(path, file, {
