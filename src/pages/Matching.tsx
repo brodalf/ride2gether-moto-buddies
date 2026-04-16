@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heart, X, MapPin, Bike, Loader2, Navigation } from "lucide-react";
@@ -16,6 +16,7 @@ const Matching = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [noLocation, setNoLocation] = useState(false);
+  const matchChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -28,9 +29,59 @@ const Matching = () => {
       }
       setUserId(session.user.id);
       await loadMatches(session.user.id);
+      subscribeToMatchNotifications(session.user.id);
     };
     init();
+
+    return () => {
+      if (matchChannelRef.current) {
+        supabase.removeChannel(matchChannelRef.current);
+      }
+    };
   }, [navigate]);
+
+  const subscribeToMatchNotifications = (uid: string) => {
+    if (matchChannelRef.current) {
+      supabase.removeChannel(matchChannelRef.current);
+    }
+
+    const channel = supabase
+      .channel(`matches:${uid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "matches",
+          // Supabase Realtime filters support single-column equality only;
+          // we subscribe broadly and filter client-side for both user columns.
+        },
+        (payload) => {
+          const row = payload.new as { user1_id: string; user2_id: string; id: string };
+          if (row.user1_id !== uid && row.user2_id !== uid) return;
+          toast({
+            title: "Neues Match!",
+            description: "Jemand hat dich auch gemocht – schreib eine Nachricht!",
+            action: (
+              <Button
+                size="sm"
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => navigate(`/chat?matchId=${row.id}`)}
+              >
+                Chat öffnen
+              </Button>
+            ),
+          } as Parameters<typeof toast>[0]);
+        }
+      )
+      .subscribe((status, err) => {
+        if (err || status === "CHANNEL_ERROR") {
+          console.error("Match-Notification Subscription fehlgeschlagen:", status, err);
+        }
+      });
+
+    matchChannelRef.current = channel;
+  };
 
   const loadMatches = async (uid: string) => {
     setLoading(true);
@@ -208,7 +259,7 @@ const Matching = () => {
               {currentProfile.avatar_url ? (
                 <img
                   src={currentProfile.avatar_url}
-                  alt={currentProfile.full_name}
+                  alt={currentProfile.full_name ?? ""}
                   className="w-full h-full object-cover"
                 />
               ) : (

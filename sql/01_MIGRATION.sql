@@ -365,3 +365,5 @@ CREATE POLICY "Gruppen-Nachrichten senden"  ON public.group_messages FOR INSERT 
 -- ── 7. Realtime aktivieren ────────────────────────────────────
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.group_messages;
+-- Matches: Realtime damit beide Partner sofort benachrichtigt werden
+ALTER PUBLICATION supabase_realtime ADD TABLE public.matches;
