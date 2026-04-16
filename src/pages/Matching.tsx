@@ -75,12 +75,17 @@ const Matching = () => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         if (!userId) return;
-        await supabase.rpc("update_user_location", {
-          p_user_id: userId,
-          p_lat: pos.coords.latitude,
-          p_lng: pos.coords.longitude,
-        });
-        await loadMatches(userId);
+        try {
+          await supabase.rpc("update_user_location", {
+            p_user_id: userId,
+            p_lat: pos.coords.latitude,
+            p_lng: pos.coords.longitude,
+          });
+          await loadMatches(userId);
+        } catch {
+          setLoading(false);
+          toast({ title: "Fehler beim Speichern des Standorts", variant: "destructive" });
+        }
       },
       () => {
         setLoading(false);

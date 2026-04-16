@@ -178,8 +178,11 @@ const ProfileSetup = () => {
             </Label>
             <div className="mt-6">
               <Slider
-                value={[profileData.groupSize]}
-                onValueChange={([v]) => setProfileData({ ...profileData, groupSize: v })}
+                value={[profileData.groupSize === 1 ? 2 : profileData.groupSize]}
+                onValueChange={([v]) => {
+                  // Wert 1 ist semantisch ungültig (kein 1-Personen-Match) → auf 0 setzen
+                  setProfileData({ ...profileData, groupSize: v === 1 ? 0 : v });
+                }}
                 min={0}
                 max={8}
                 step={1}
@@ -188,6 +191,7 @@ const ProfileSetup = () => {
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-3">
               <span>Egal</span>
+              <span>–</span>
               <span>2</span>
               <span>3</span>
               <span>4</span>
@@ -327,14 +331,21 @@ const ProfileSetup = () => {
 
       if (error) throw error;
 
-      // Standort via Geolocation API setzen (optional)
+      // Standort via Geolocation API setzen – awaiten damit Matching sofort funktioniert
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          await supabase.rpc("update_user_location", {
-            p_user_id: userId,
-            p_lat: pos.coords.latitude,
-            p_lng: pos.coords.longitude,
-          });
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              await supabase.rpc("update_user_location", {
+                p_user_id: userId,
+                p_lat: pos.coords.latitude,
+                p_lng: pos.coords.longitude,
+              });
+              resolve();
+            },
+            () => resolve(), // Fehler ignorieren – Nutzer kann Standort später in Matching freigeben
+            { timeout: 10_000 }
+          );
         });
       }
 

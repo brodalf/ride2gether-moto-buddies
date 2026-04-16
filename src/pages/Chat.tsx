@@ -25,8 +25,6 @@ const Chat = () => {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    let activeMatchId: string | null = null;
-
     const init = async () => {
       const {
         data: { session },
@@ -44,7 +42,6 @@ const Chat = () => {
         setLoading(false);
         return;
       }
-      activeMatchId = targetMatchId;
 
       await loadMatch(targetMatchId, uid);
       await loadMessages(targetMatchId);

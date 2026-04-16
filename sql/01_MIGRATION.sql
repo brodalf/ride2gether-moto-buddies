@@ -288,7 +288,16 @@ CREATE POLICY "Eigenes Profil aktualisieren" ON public.profiles FOR UPDATE USING
 
 -- user_locations
 ALTER TABLE public.user_locations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Standorte lesen"             ON public.user_locations FOR SELECT USING (true);
+-- Eigenen Standort immer lesen; fremde Standorte nur wenn ein Match besteht
+-- (SECURITY DEFINER Funktionen umgehen RLS → Matching bleibt unberührt)
+CREATE POLICY "Eigenen Standort lesen"      ON public.user_locations FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Standort gematchter Nutzer"  ON public.user_locations FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.matches m
+    WHERE (m.user1_id = auth.uid() OR m.user2_id = auth.uid())
+      AND (m.user1_id = user_locations.user_id OR m.user2_id = user_locations.user_id)
+  )
+);
 CREATE POLICY "Eigenen Standort verwalten"  ON public.user_locations FOR ALL    USING (auth.uid() = user_id);
 
 -- user_oauth_providers
@@ -320,6 +329,10 @@ CREATE POLICY "Match-Nachrichten senden"    ON public.messages FOR INSERT WITH C
     WHERE m.id = match_id AND (m.user1_id = auth.uid() OR m.user2_id = auth.uid())
   )
 );
+-- Keine Updates erlaubt (Nachrichten sind unveränderlich)
+CREATE POLICY "Nachrichten nicht änderbar"  ON public.messages FOR UPDATE USING (false);
+-- Nur eigene Nachrichten löschen (z.B. "Nachricht zurückziehen")
+CREATE POLICY "Eigene Nachricht löschen"    ON public.messages FOR DELETE USING (auth.uid() = sender_id);
 
 -- groups
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
