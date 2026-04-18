@@ -75,6 +75,24 @@ export interface UserMatch {
   unread_count: number
 }
 
+export type EventType = 'tour' | 'sportlich' | 'entspannt' | 'social'
+
+export interface Event {
+  id: string
+  name: string
+  description: string | null
+  creator_id: string
+  creator_name: string | null
+  max_members: number
+  member_count: number
+  is_member: boolean
+  location_text: string | null
+  event_date: string | null
+  riding_style: RidingStyle | null
+  event_type: EventType | null
+  created_at: string
+}
+
 // ── Hilfsfunktionen ───────────────────────────────────────────────────────────
 
 /** Standort des aktuellen Nutzers in der Datenbank aktualisieren */
