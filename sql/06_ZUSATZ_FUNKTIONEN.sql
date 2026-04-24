@@ -174,3 +174,12 @@ BEGIN
   ORDER  BY gm.joined_at ASC;
 END;
 $$;
+
+-- Eigenes Konto löschen (löscht Profil + löst CASCADE auf alle Daten aus)
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
