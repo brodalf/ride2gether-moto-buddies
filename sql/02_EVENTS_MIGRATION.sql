@@ -128,5 +128,14 @@ END;
 $$;
 
 -- ── 5. RLS: Eigene Gruppe löschen erlauben ───────────────────
-CREATE POLICY IF NOT EXISTS "Eigene Gruppe löschen"
-  ON public.groups FOR DELETE USING (auth.uid() = creator_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'groups' AND policyname = 'Eigene Gruppe löschen'
+  ) THEN
+    CREATE POLICY "Eigene Gruppe löschen"
+      ON public.groups FOR DELETE USING (auth.uid() = creator_id);
+  END IF;
+END;
+$$;
