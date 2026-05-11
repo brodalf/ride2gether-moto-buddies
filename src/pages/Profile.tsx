@@ -22,10 +22,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Settings, Edit, Bike, MapPin, Heart, MessageCircle, Loader2, LogOut } from "lucide-react";
+import { Settings, Edit, Bike, MapPin, Heart, MessageCircle, Loader2, LogOut, Camera, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
-import { supabase, Profile as ProfileType, RidingStyle } from "@/lib/supabase";
+import { supabase, uploadPhoto, Profile as ProfileType, RidingStyle } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 const RIDING_STYLE_LABELS: Record<string, string> = {
@@ -45,6 +45,8 @@ const Profile = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBike, setUploadingBike] = useState(false);
 
   const [form, setForm] = useState({
     full_name:       "",
@@ -126,6 +128,41 @@ const Profile = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const handlePhotoUpload = async (
+    file: File,
+    type: "avatar" | "bike",
+  ) => {
+    if (!userId) return;
+    const setUploading = type === "avatar" ? setUploadingAvatar : setUploadingBike;
+    setUploading(true);
+    try {
+      const url = await uploadPhoto(userId, file, type);
+      if (!url) {
+        toast({
+          title: "Upload fehlgeschlagen",
+          description: "Bitte prüfe Dateityp (JPG/PNG/WebP) und Größe (max. 5 MB).",
+          variant: "destructive",
+        });
+        return;
+      }
+      const column = type === "avatar" ? "avatar_url" : "bike_photo_url";
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [column]: url })
+        .eq("id", userId);
+      if (error) {
+        toast({ title: "Fehler beim Speichern", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: type === "avatar" ? "Avatar aktualisiert!" : "Bike-Foto aktualisiert!" });
+      await loadProfile(userId);
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e?.message ?? "Unbekannter Fehler", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -313,6 +350,90 @@ const Profile = () => {
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
+            {/* Avatar-Foto */}
+            <div>
+              <Label className="text-gray-300">Profilfoto</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera className="w-8 h-8 text-white" />
+                  )}
+                </div>
+                <label className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePhotoUpload(f, "avatar");
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    asChild
+                    disabled={uploadingAvatar}
+                    variant="outline"
+                    className="w-full bg-gray-800 border-gray-700 text-white hover:bg-gray-700 cursor-pointer"
+                  >
+                    <span>
+                      {uploadingAvatar ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Wird hochgeladen...</>
+                      ) : (
+                        <><Upload className="w-4 h-4 mr-2" />Foto ändern</>
+                      )}
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+
+            {/* Bike-Foto */}
+            <div>
+              <Label className="text-gray-300">Bike-Foto</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                  {profile?.bike_photo_url ? (
+                    <img src={profile.bike_photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Bike className="w-8 h-8 text-gray-500" />
+                  )}
+                </div>
+                <label className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingBike}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePhotoUpload(f, "bike");
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    asChild
+                    disabled={uploadingBike}
+                    variant="outline"
+                    className="w-full bg-gray-800 border-gray-700 text-white hover:bg-gray-700 cursor-pointer"
+                  >
+                    <span>
+                      {uploadingBike ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Wird hochgeladen...</>
+                      ) : (
+                        <><Upload className="w-4 h-4 mr-2" />Bike-Foto ändern</>
+                      )}
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+
             <div>
               <Label className="text-gray-300">Name</Label>
               <Input
