@@ -130,11 +130,30 @@ const Profile = () => {
     navigate("/auth");
   };
 
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_SIZE = 5 * 1024 * 1024;
+
   const handlePhotoUpload = async (
     file: File,
     type: "avatar" | "bike",
   ) => {
     if (!userId) return;
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        title: "Ungültiger Dateityp",
+        description: "Erlaubt sind JPG, PNG oder WebP.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast({
+        title: "Datei zu groß",
+        description: "Maximale Dateigröße: 5 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
     const setUploading = type === "avatar" ? setUploadingAvatar : setUploadingBike;
     setUploading(true);
     try {
