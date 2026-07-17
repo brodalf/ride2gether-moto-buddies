@@ -115,28 +115,24 @@ const Calendar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/auth"); return; }
 
-      const { error } = await supabase.from("groups").insert({
-        name:          form.name.trim().slice(0, 100),
-        description:   form.description.trim().slice(0, 1000) || null,
-        creator_id:    session.user.id,
-        max_members:   maxMem,
-        location_text: form.location_text.trim().slice(0, 200) || null,
-        event_date:    eventDate,
-        event_type:    form.event_type,
-        riding_style:  form.riding_style,
-      });
+      const { data: newGroup, error } = await supabase
+        .from("groups")
+        .insert({
+          name:          form.name.trim().slice(0, 100),
+          description:   form.description.trim().slice(0, 1000) || null,
+          creator_id:    session.user.id,
+          max_members:   maxMem,
+          location_text: form.location_text.trim().slice(0, 200) || null,
+          event_date:    eventDate,
+          event_type:    form.event_type,
+          riding_style:  form.riding_style,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
       // Ersteller automatisch als Admin-Mitglied eintragen
-      const { data: newGroup } = await supabase
-        .from("groups")
-        .select("id")
-        .eq("creator_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
       if (newGroup) {
         await supabase.from("group_members").insert({
           group_id: newGroup.id,

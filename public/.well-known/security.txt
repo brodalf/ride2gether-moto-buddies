@@ -1,0 +1,4 @@
+Contact: mailto:sebastian.kuntschke@googlemail.com
+Expires: 2027-05-09T00:00:00.000Z
+Preferred-Languages: de, en
+Canonical: https://ride2gether-moto-buddies.vercel.app/.well-known/security.txt
