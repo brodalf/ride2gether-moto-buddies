@@ -108,42 +108,30 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 /**
- * EXIF-Metadaten (inkl. GPS-Koordinaten) durch Canvas-Roundtrip entfernen.
- * Fallback: original File wenn Browser Canvas/Bitmap nicht unterstützt.
+ * Entfernt EXIF-Daten (inkl. GPS) durch Re-Encoding via Canvas.
+ * Wendet EXIF-Orientation vorher an, sonst landen iPhone-Portraits
+ * auf der Seite. [V58]
  */
-async function stripExif(file: File): Promise<File> {
-  try {
-    if (typeof createImageBitmap !== 'function') return file
+async function stripExif(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas-2D-Kontext nicht verfügbar')
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
 
-    const bitmap = await createImageBitmap(file)
-    const useOffscreen = typeof OffscreenCanvas !== 'undefined'
-    const canvas: OffscreenCanvas | HTMLCanvasElement = useOffscreen
-      ? new OffscreenCanvas(bitmap.width, bitmap.height)
-      : Object.assign(document.createElement('canvas'), {
-          width: bitmap.width,
-          height: bitmap.height,
-        })
+  const outputType = file.type === 'image/png' ? 'image/png' : file.type
+  const quality = outputType === 'image/png' ? undefined : 0.92
 
-    const ctx = (canvas as HTMLCanvasElement).getContext('2d')
-    if (!ctx) return file
-    ctx.drawImage(bitmap, 0, 0)
-
-    const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-    const blob: Blob = useOffscreen
-      ? await (canvas as OffscreenCanvas).convertToBlob({ type: outType, quality: 0.92 })
-      : await new Promise<Blob>((resolve, reject) => {
-          ;(canvas as HTMLCanvasElement).toBlob(
-            (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
-            outType,
-            0.92,
-          )
-        })
-
-    return new File([blob], file.name, { type: blob.type })
-  } catch (err) {
-    console.warn('EXIF-Strip fehlgeschlagen, verwende Original:', err)
-    return file
-  }
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Re-Encoding fehlgeschlagen'))),
+      outputType,
+      quality,
+    )
+  })
 }
 
 /** Foto in den Supabase Storage Bucket 'photos' hochladen */
@@ -164,16 +152,22 @@ export async function uploadPhoto(
     return null
   }
 
-  // V58: EXIF-Metadaten (GPS-Koordinaten) entfernen
-  const safeFile = await stripExif(file)
-
   // Pfad enthält userId → Supabase Storage RLS kann ihn darüber schützen
-  const ext = safeFile.type === 'image/png' ? 'png' : 'jpg'
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${userId}/${type}_${Date.now()}.${ext}`
 
-  const { error } = await supabase.storage.from('photos').upload(path, safeFile, {
+  // EXIF strippen — sonst landen GPS-Koordinaten der Aufnahme im Bucket [V58]
+  let sanitized: Blob
+  try {
+    sanitized = await stripExif(file)
+  } catch (e) {
+    console.error('EXIF-Stripping fehlgeschlagen, Upload abgelehnt', e)
+    return null
+  }
+
+  const { error } = await supabase.storage.from('photos').upload(path, sanitized, {
     upsert: true,
-    contentType: safeFile.type,
+    contentType: file.type,
   })
 
   if (error) {
