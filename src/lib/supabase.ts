@@ -107,6 +107,45 @@ export async function updateUserLocation(userId: string, lat: number, lng: numbe
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
+/**
+ * EXIF-Metadaten (inkl. GPS-Koordinaten) durch Canvas-Roundtrip entfernen.
+ * Fallback: original File wenn Browser Canvas/Bitmap nicht unterstützt.
+ */
+async function stripExif(file: File): Promise<File> {
+  try {
+    if (typeof createImageBitmap !== 'function') return file
+
+    const bitmap = await createImageBitmap(file)
+    const useOffscreen = typeof OffscreenCanvas !== 'undefined'
+    const canvas: OffscreenCanvas | HTMLCanvasElement = useOffscreen
+      ? new OffscreenCanvas(bitmap.width, bitmap.height)
+      : Object.assign(document.createElement('canvas'), {
+          width: bitmap.width,
+          height: bitmap.height,
+        })
+
+    const ctx = (canvas as HTMLCanvasElement).getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0)
+
+    const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const blob: Blob = useOffscreen
+      ? await (canvas as OffscreenCanvas).convertToBlob({ type: outType, quality: 0.92 })
+      : await new Promise<Blob>((resolve, reject) => {
+          ;(canvas as HTMLCanvasElement).toBlob(
+            (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+            outType,
+            0.92,
+          )
+        })
+
+    return new File([blob], file.name, { type: blob.type })
+  } catch (err) {
+    console.warn('EXIF-Strip fehlgeschlagen, verwende Original:', err)
+    return file
+  }
+}
+
 /** Foto in den Supabase Storage Bucket 'photos' hochladen */
 export async function uploadPhoto(
   userId: string,
@@ -125,13 +164,16 @@ export async function uploadPhoto(
     return null
   }
 
+  // V58: EXIF-Metadaten (GPS-Koordinaten) entfernen
+  const safeFile = await stripExif(file)
+
   // Pfad enthält userId → Supabase Storage RLS kann ihn darüber schützen
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const ext = safeFile.type === 'image/png' ? 'png' : 'jpg'
   const path = `${userId}/${type}_${Date.now()}.${ext}`
 
-  const { error } = await supabase.storage.from('photos').upload(path, file, {
+  const { error } = await supabase.storage.from('photos').upload(path, safeFile, {
     upsert: true,
-    contentType: file.type,
+    contentType: safeFile.type,
   })
 
   if (error) {
