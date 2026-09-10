@@ -1,0 +1,55 @@
+# Home Assistant auf Raspberry Pi 4
+# Ablegen unter: /opt/homeassistant/docker-compose.yml
+# Start:  cd /opt/homeassistant && docker compose up -d
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+
+    # host-Netzwerk ist noetig, damit Home Assistant Geraete im Heimnetz
+    # automatisch findet (mDNS / SSDP). Mit dem Docker-Standardnetzwerk
+    # funktioniert die Geraetesuche nicht.
+    network_mode: host
+
+    environment:
+      - TZ=Europe/Berlin
+
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+
+    # Speicherbremse fuer den Pi 4 (4 GB):
+    # verhindert, dass ein Speicherleck in einer Integration den ganzen Pi
+    # ausbremst und damit auch Pi-hole und MagicMirror mitreisst.
+    # Bei 8 GB RAM kann der Wert auf 2g erhoeht werden.
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------
+  # Mosquitto: fuer die vier bekannten Geraete NICHT noetig.
+  # Der Hisense-Fernseher bringt seinen eigenen MQTT-Broker mit (Port 36669).
+  # Erst aktivieren, wenn spaeter Zigbee/ESPHome dazukommt.
+  # ---------------------------------------------------------------------
+  # mosquitto:
+  #   image: eclipse-mosquitto:2
+  #   container_name: mosquitto
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:1883:1883"      # bewusst nur lokal, nicht im ganzen LAN
+  #   volumes:
+  #     - ./mosquitto/config:/mosquitto/config
+  #     - ./mosquitto/data:/mosquitto/data
+  #     - ./mosquitto/log:/mosquitto/log
+  #   environment:
+  #     - TZ=Europe/Berlin

@@ -1,0 +1,67 @@
+# Home Assistant Grundkonfiguration
+# Ablegen unter: /opt/homeassistant/config/configuration.yaml
+#
+# Angepasst fuer Raspberry Pi 4 mit begrenztem RAM und SSD-Schonung.
+
+default_config:
+
+homeassistant:
+  name: Zuhause
+  time_zone: Europe/Berlin
+  unit_system: metric
+  currency: EUR
+  country: DE
+
+# ---------------------------------------------------------------------------
+# Zugriff
+# ---------------------------------------------------------------------------
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1
+    - 10.9.0.0/24          # WireGuard-Netz (siehe Schritt 4)
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+# ---------------------------------------------------------------------------
+# Datenbank: das Wichtigste fuer einen Pi
+#
+# Standard waeren 10 Tage sekundengenaue Historie -> mehrere GB und
+# staendige Schreiblast. Fuer den Alltag reichen 5 Tage.
+#
+# Langzeitstatistiken (Stunden-/Tageswerte, z.B. Stromverbrauch) sind davon
+# NICHT betroffen und bleiben unbegrenzt erhalten.
+# ---------------------------------------------------------------------------
+recorder:
+  purge_keep_days: 5           # bei 8 GB RAM darf hier auch 10 stehen
+  commit_interval: 30          # seltener schreiben schont die SSD
+  auto_purge: true
+  exclude:
+    domains:
+      - automation
+      - updater
+      - persistent_notification
+    entity_globs:
+      - sensor.sun_*           # aendert sich staendig, ohne Nutzen
+      - sensor.*_uptime
+      - sensor.*_last_restart
+
+logbook:
+  exclude:
+    domains:
+      - automation
+      - updater
+
+logger:
+  default: warning
+  logs:
+    # Beim Einrichten eines Geraets voruebergehend auf "debug" stellen,
+    # danach wieder auskommentieren - debug erzeugt viel Schreiblast.
+    # custom_components.hisense_tv: debug
+    # homeassistant.components.home_connect: debug
+    # custom_components.localtuya: debug
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml

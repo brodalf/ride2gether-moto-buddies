@@ -1,0 +1,18 @@
+# WireGuard-Client fuer das Handy
+# In die WireGuard-App uebertragen (oder als QR-Code einlesen:
+#   qrencode -t ansiutf8 < wg0-handy.conf )
+
+[Interface]
+Address    = 10.9.0.10/32
+PrivateKey = <PRIVATER-SCHLUESSEL-HANDY>
+# Pi-hole als DNS mitnutzen - dann filtert es auch unterwegs.
+# Weglassen, falls das Probleme macht.
+DNS        = 192.168.178.20
+
+[Peer]
+PublicKey  = <OEFFENTLICHER-SCHLUESSEL-SERVER>
+Endpoint   = <SERVER-IP>:51820
+# Tunnelnetz + Heimnetz. So erreicht das Handy Home Assistant unter
+# seiner normalen Heimnetz-Adresse - die App braucht keine zweite URL.
+AllowedIPs = 10.9.0.0/24, 192.168.178.0/24
+PersistentKeepalive = 25

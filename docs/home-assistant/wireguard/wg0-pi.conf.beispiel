@@ -1,0 +1,25 @@
+# WireGuard-Client auf dem Raspberry Pi (haelt den Tunnel dauerhaft offen)
+# Ablegen unter: /etc/wireguard/wg0.conf   (chmod 600)
+#
+# In diese Datei gehoert der PRIVATE Schluessel des PI und
+# der OEFFENTLICHE Schluessel des SERVERS.
+
+[Interface]
+Address    = 10.9.0.2/24
+PrivateKey = <PRIVATER-SCHLUESSEL-PI>
+
+# Der Pi arbeitet als Tor ins Heimnetz:
+# Anfragen aus dem Tunnel werden so umgeschrieben, als kaemen sie vom Pi.
+# Dadurch muessen Fernseher und Steckdose nichts vom Tunnel wissen.
+# Netzwerkschnittstelle pruefen: "ip route | grep default" (eth0 oder wlan0)
+PostUp   = sysctl -w net.ipv4.ip_forward=1; iptables -t nat -A POSTROUTING -s 10.9.0.0/24 -o eth0 -j MASQUERADE; iptables -A FORWARD -i wg0 -o eth0 -j ACCEPT; iptables -A FORWARD -i eth0 -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -s 10.9.0.0/24 -o eth0 -j MASQUERADE; iptables -D FORWARD -i wg0 -o eth0 -j ACCEPT; iptables -D FORWARD -i eth0 -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+[Peer]
+PublicKey  = <OEFFENTLICHER-SCHLUESSEL-SERVER>
+Endpoint   = <SERVER-IP>:51820
+# Nur das Tunnelnetz - NICHT 0.0.0.0/0, sonst laeuft der komplette
+# Internetverkehr des Pi ueber Hetzner (langsamer und unnoetig).
+AllowedIPs = 10.9.0.0/24
+# Haelt die Verbindung durch die Router-Firewall hindurch offen.
+PersistentKeepalive = 25

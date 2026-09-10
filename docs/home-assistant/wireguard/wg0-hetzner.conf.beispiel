@@ -1,0 +1,30 @@
+# WireGuard-Server auf dem Hetzner-Server
+# Ablegen unter: /etc/wireguard/wg0.conf   (chmod 600)
+#
+# Platzhalter <...> ersetzen.
+# In diese Datei gehoert der PRIVATE Schluessel des SERVERS und
+# die OEFFENTLICHEN Schluessel von Pi und Handy.
+
+[Interface]
+Address    = 10.9.0.1/24
+ListenPort = 51820
+PrivateKey = <PRIVATER-SCHLUESSEL-SERVER>
+
+# Weiterleitung zwischen den Tunnel-Teilnehmern erlauben,
+# damit das Handy ueber den Pi ins Heimnetz kommt.
+PostUp   = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT
+
+# --- Raspberry Pi zu Hause -------------------------------------------------
+# AllowedIPs enthaelt zusaetzlich das Heimnetz: dadurch weiss der Server,
+# dass Anfragen an 192.168.178.x ueber den Pi geschickt werden muessen.
+# Heimnetz-Bereich ggf. anpassen (FritzBox = 192.168.178.0/24).
+[Peer]
+PublicKey           = <OEFFENTLICHER-SCHLUESSEL-PI>
+AllowedIPs          = 10.9.0.2/32, 192.168.178.0/24
+PersistentKeepalive = 25
+
+# --- Handy -----------------------------------------------------------------
+[Peer]
+PublicKey  = <OEFFENTLICHER-SCHLUESSEL-HANDY>
+AllowedIPs = 10.9.0.10/32
