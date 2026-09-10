@@ -48,10 +48,17 @@ Damit ist jede aktuelle SATA-SSD bereits am Limit. Eine schnelle NVMe bringt am 
 | Teil | Konkret | ca. |
 |---|---|---|
 | SSD | Crucial MX500 500 GB *oder* Samsung 870 EVO 250 GB | 40–55 € |
-| Adapter | Ugreen CM320, ICY BOX IB-AC703, Delock USB3→SATA (ASM1153E / ASM225CM) | 10–15 € |
+| Gehäuse | **UGREEN CA-30848** 2,5" USB 3.0 (ASM1153E, UASP) — geprüft | 10–15 € |
 | Netzteil | offizielles Raspberry-Pi-Netzteil 5,1 V / 3 A | 10 € |
 
 Preise ungefaehr, schwanken.
+
+**Zum UGREEN CA-30848:** Laut Hersteller steckt dort der **ASM1153E** — der am Pi
+bewährte ASMedia-Chip, mit sauberem UASP und funktionierendem USB-Boot. Beim Bestellen
+auf die Modellnummer achten: UGREEN führt mehrere 2,5"-Gehäuse, und Chips wechseln bei
+Neuauflagen gelegentlich still. Für `30848` ist der Chip dokumentiert.
+
+Gleichwertige Alternativen mit ASMedia-Chip: ICY BOX IB-AC703, Delock USB3→SATA.
 
 **Alternative als Komplettlösung:** Argon ONE V2 **M.2**-Gehäuse (~40 €) — Gehäuse,
 Kühlung und SSD-Anbindung in einem.
@@ -85,9 +92,32 @@ läuft sie mit einem Bruchteil der Geschwindigkeit.
 ### Nach dem Anschließen: Tempo prüfen
 
 ```bash
+lsusb                          # sollte den Chip zeigen, z.B. "ASMedia"
 sudo hdparm -t /dev/sda        # gesund sind ~250–330 MB/s
+lsblk -o NAME,TRAN,ROTA        # TRAN=usb, ROTA=0 (SSD korrekt erkannt)
 # deutlich unter 100 MB/s -> falscher Port oder Adapter macht Probleme
 ```
+
+### Optional: TRIM aktivieren
+
+TRIM hält die SSD über Jahre schnell. Über USB ist es nicht automatisch aktiv, weil der
+Adapter den Befehl durchreichen muss — der ASM1153E kann das.
+
+```bash
+sudo fstrim -v /
+# "the discard operation is not supported" -> Regel anlegen:
+
+lsusb | grep -i asmedia         # IDs ablesen, z.B. 174c:55aa
+sudo tee /etc/udev/rules.d/10-usb-trim.rules >/dev/null <<'EOF'
+ACTION=="add|change", ATTRS{idVendor}=="174c", ATTRS{idProduct}=="55aa", \
+  SUBSYSTEM=="scsi_disk", ATTR{provisioning_mode}="unmap"
+EOF
+sudo reboot
+```
+
+IDs aus `lsusb` eintragen, falls sie abweichen. Danach `sudo fstrim -v /` erneut testen.
+Läuft es weiterhin nicht: kein Grund zur Sorge — bei dieser Schreiblast ist TRIM eine
+Feinheit, kein notwendiger Schritt.
 
 ---
 
