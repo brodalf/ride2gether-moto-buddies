@@ -34,7 +34,64 @@ Notiere dir das Ergebnis. Besonders die Portliste brauchst du gleich.
 
 ---
 
-## 1.2 Auf SSD umziehen (der wichtigste Schritt)
+## 1.2 Welche SSD kaufen?
+
+Falls noch keine SSD da ist. Die Kernaussage vorweg: **Die SSD selbst ist fast egal —
+der Adapter entscheidet.**
+
+Der Pi 4B hat kein NVMe. Alles laeuft ueber USB 3.0 und bremst real bei etwa 300 MB/s.
+Damit ist jede aktuelle SATA-SSD bereits am Limit. Eine schnelle NVMe bringt am Pi 4
+**keinen** Vorteil, kostet aber mehr Strom und erzeugt mehr Waerme.
+
+### Empfehlung
+
+| Teil | Konkret | ca. |
+|---|---|---|
+| SSD | Crucial MX500 500 GB *oder* Samsung 870 EVO 250 GB | 40–55 € |
+| Adapter | Ugreen CM320, ICY BOX IB-AC703, Delock USB3→SATA (ASM1153E / ASM225CM) | 10–15 € |
+| Netzteil | offizielles Raspberry-Pi-Netzteil 5,1 V / 3 A | 10 € |
+
+Preise ungefaehr, schwanken.
+
+**Alternative als Komplettlösung:** Argon ONE V2 **M.2**-Gehäuse (~40 €) — Gehäuse,
+Kühlung und SSD-Anbindung in einem.
+**Achtung:** Dort gehört eine **M.2 SATA**-SSD hinein, *keine* NVMe. Das ist der
+häufigste teure Fehlkauf bei diesem Gehäuse.
+
+### Was du nicht brauchst
+
+- **NVMe im USB-Gehäuse** — kein Tempovorteil am Pi 4, dafür mehr Strombedarf und Wärme
+- **1 TB oder mehr** — das Setup belegt realistisch 20–40 GB
+- **USB-Stick oder SD-Karte im USB-Adapter** — stirbt genauso schnell wie die SD-Karte
+- **Sorge um Schreibfestigkeit** — eine 250-GB-MX500 hält rund 100 TBW, Home Assistant
+  schreibt hier grob 1–2 TB pro Jahr. Das reicht rechnerisch Jahrzehnte. Die SD-Karte
+  war nie ein Mengenproblem, sondern eines von fehlender Wear-Leveling-Logik und
+  Empfindlichkeit gegen Stromausfälle.
+
+### Zwei Dinge, die wirklich schiefgehen
+
+**Zu schwaches Netzteil.** Der Pi 4 hat für alle USB-Ports zusammen nur etwa 1,2 A
+Budget. Eine SATA-SSD passt da hinein, ein billiges Handy-Ladegerät als Netzteil nicht.
+Genau das erzeugt scheinbar zufällige Abstürze und beschädigte Datenbanken — Fehler,
+deren Ursache man sonst tagelang an der falschen Stelle sucht.
+
+```bash
+vcgencmd get_throttled     # muss 0x0 sein; alles andere = Strom- oder Hitzeproblem
+```
+
+**Falscher Port.** SSD an die **blauen** USB-3.0-Ports. An den schwarzen USB-2.0-Ports
+läuft sie mit einem Bruchteil der Geschwindigkeit.
+
+### Nach dem Anschließen: Tempo prüfen
+
+```bash
+sudo hdparm -t /dev/sda        # gesund sind ~250–330 MB/s
+# deutlich unter 100 MB/s -> falscher Port oder Adapter macht Probleme
+```
+
+---
+
+## 1.3 Auf SSD umziehen (der wichtigste Schritt)
 
 Der Pi 4 kann direkt von USB booten, sobald der Bootloader aktuell ist.
 
@@ -87,7 +144,7 @@ NVMe über einen HAT ist unauffälliger als USB-SATA, aber USB-SSD reicht für d
 
 ---
 
-## 1.3 DNS-Fallback im Router eintragen
+## 1.4 DNS-Fallback im Router eintragen
 
 Damit ein Pi-Ausfall nicht das ganze Haus lahmlegt.
 
@@ -103,7 +160,7 @@ Für ein System, das die ganze Wohnung versorgt, ist dieser Tausch die richtige 
 
 ---
 
-## 1.4 Feste IP für den Pi
+## 1.5 Feste IP für den Pi
 
 Home Assistant und Pi-hole brauchen eine IP, die sich nicht ändert.
 
@@ -118,7 +175,7 @@ Notiere dir die IP, z. B. `192.168.178.20`. Sie taucht im Rest der Doku als
 
 ---
 
-## 1.5 Ports: wer belegt was?
+## 1.6 Ports: wer belegt was?
 
 | Dienst | Port | Anmerkung |
 |---|---|---|
@@ -153,7 +210,7 @@ sudo systemctl restart systemd-resolved
 
 ---
 
-## 1.6 Pi-hole nicht anfassen
+## 1.7 Pi-hole nicht anfassen
 
 Falls Pi-hole nativ (nicht in Docker) installiert ist: **so lassen.**
 
@@ -165,7 +222,7 @@ Dasselbe gilt für MagicMirror: läuft weiter wie bisher (pm2 oder systemd).
 
 ---
 
-## 1.7 Docker installieren
+## 1.8 Docker installieren
 
 ```bash
 curl -fsSL https://get.docker.com | sudo sh

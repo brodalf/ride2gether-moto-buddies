@@ -115,7 +115,7 @@ betrifft nur die sekundengenaue Historie.
 
 ## 2.5 Reverse Proxy vorbereiten — nein
 
-Auf dem Pi läuft **kein** Reverse Proxy (siehe Schritt 1.5, Port 80 gehört Pi-hole).
+Auf dem Pi läuft **kein** Reverse Proxy (siehe Schritt 1.6, Port 80 gehört Pi-hole).
 
 Trage trotzdem schon jetzt die WireGuard-Netze als vertrauenswürdig ein, damit der
 Fernzugriff später ohne weiteres Nachjustieren funktioniert — das ist bereits in der

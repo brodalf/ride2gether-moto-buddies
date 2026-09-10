@@ -40,7 +40,7 @@ Fehlkonfiguration, sondern eine Eigenschaft der Geräte. Bewertung dazu in
 ## Feste IPs vergeben
 
 Bevor du anfängst: Vergib im Router für **Fernseher** und **Steckdose** feste IP-Adressen
-(gleiches Vorgehen wie beim Pi in Schritt 1.4).
+(gleiches Vorgehen wie beim Pi in Schritt 1.5).
 
 Grund: Beide werden in Home Assistant über ihre IP angesprochen. Wenn der Router beim
 nächsten Neustart eine andere Adresse vergibt, ist die Verbindung weg — und die Ursache

@@ -156,7 +156,7 @@ ping -c3 <GERAETE-IP>
 ```
 
 Keine Antwort? → Im Router nachsehen, welche IP das Gerät jetzt hat, und dort eine
-**feste** Adresse zuweisen (siehe Schritt 1.4).
+**feste** Adresse zuweisen (siehe Schritt 1.5).
 
 ### Fernzugriff geht nicht
 
