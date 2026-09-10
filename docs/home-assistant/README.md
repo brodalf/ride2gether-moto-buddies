@@ -87,6 +87,11 @@ Einer nach dem anderen. Nach jedem Schritt prüfen, ob Pi-hole und MagicMirror n
 | 5 | Datenflüsse / DSGVO bewerten | [05-dsgvo-datenfluesse.md](05-dsgvo-datenfluesse.md) | lesen |
 | 6 | Betrieb, Wartung, Fehlersuche | [06-betrieb-und-troubleshooting.md](06-betrieb-und-troubleshooting.md) | Nachschlagewerk |
 
+Optional, unabhängig davon:
+[anhang-retro-gaming.md](anhang-retro-gaming.md) — wie sich der freie Platz auf der SSD
+als ROM-Speicher für N64-Emulation nutzen lässt, **ohne** die Stabilität des Pi zu
+gefährden.
+
 **Wichtig:** Schritt 3 nicht an einem Stück durchziehen. Jedes Gerät einzeln anbinden und
 testen. Wenn etwas nicht geht, weiß man dann auch, was.
 
@@ -103,6 +108,7 @@ docs/home-assistant/
 ├── 04-hetzner-backup-fernzugriff.md   restic + WireGuard
 ├── 05-dsgvo-datenfluesse.md           Wohin welche Daten fließen
 ├── 06-betrieb-und-troubleshooting.md  Wartung + Fehlersuche
+├── anhang-retro-gaming.md             optional: SSD-Platz fuer N64-Emulation
 ├── geraete/
 │   ├── hisense-55e7nq-pro.md
 │   ├── bosch-smu4eus00d.md
