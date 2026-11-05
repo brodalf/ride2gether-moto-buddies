@@ -153,7 +153,8 @@ export async function uploadPhoto(
   }
 
   // Pfad enthält userId → Supabase Storage RLS kann ihn darüber schützen
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const mimeToExt: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+  const ext = mimeToExt[file.type] ?? 'jpg'
   const path = `${userId}/${type}_${Date.now()}.${ext}`
 
   // EXIF strippen — sonst landen GPS-Koordinaten der Aufnahme im Bucket [V58]

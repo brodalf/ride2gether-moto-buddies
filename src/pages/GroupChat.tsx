@@ -99,28 +99,31 @@ const GroupChat = () => {
   };
 
   const handleSendMessage = () => {
-    if (message.trim() && selectedGroup) {
-      const newMessage = {
-        id: (messages[selectedGroup]?.length || 0) + 1,
-        sender: "Du",
-        content: message,
-        timestamp: new Date().toLocaleTimeString('de-DE', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        isOwn: true
-      };
-      
-      setMessages(prev => ({
-        ...prev,
-        [selectedGroup]: [...(prev[selectedGroup] || []), newMessage]
-      }));
-      setMessage("");
-    }
+    const content = message.trim();
+    if (!content || !selectedGroup) return;
+    if (content.length > 2000) return;
+
+    const newMessage = {
+      id: (messages[selectedGroup]?.length || 0) + 1,
+      sender: "Du",
+      content,
+      timestamp: new Date().toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      isOwn: true,
+    };
+
+    setMessages(prev => ({
+      ...prev,
+      [selectedGroup]: [...(prev[selectedGroup] || []), newMessage],
+    }));
+    setMessage("");
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -221,7 +224,7 @@ const GroupChat = () => {
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder="Nachricht an die Gruppe..."
               className="flex-1 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
             />
